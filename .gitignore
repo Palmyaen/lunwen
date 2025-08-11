@@ -1,0 +1,27 @@
+# LaTeX auxiliary files
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+*.lof
+*.idx
+*.blg
+*.bbl
+*.synctex.gz
+
+# System files
+.DS_Store
+.vscode/
+
+# Backup files
+*_backup.*
+*.backup
+
+# Large PDF files (optional - comment out if you want to include thesis.pdf)
+# *.pdf
+
+# Temporary files
+*.tmp
+*.temp

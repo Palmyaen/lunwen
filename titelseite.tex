@@ -1,0 +1,59 @@
+%% Titelseite
+
+\def\usesf{}
+\let\usesf\sffamily % diese Zeile auskommentieren für normalen TeX Font
+
+\newsavebox{\Erstgutachter}
+\savebox{\Erstgutachter}{\usesf Prof.~Dr. Sax}
+\newsavebox{\Zweitgutachter}
+\savebox{\Zweitgutachter}{\usesf Prof.~Dr.}
+
+\begin{titlepage}
+\setlength{\unitlength}{1pt}
+\begin{picture}(0,0)(85,770)
+\includegraphics[width=\paperwidth]{logos/KIT_Deckblatt}
+\end{picture}
+
+%\vspace*{-39pt}\hspace*{300pt}\includegraphics[width=.27\paperwidth]{logos/IOSB}
+\vspace*{-39pt}\hspace*{300pt}\includegraphics[width=.21\paperwidth]{logos/access_kit_rgb_logo.png}
+
+\thispagestyle{empty}
+
+%\begin{titlepage}
+%%\let\footnotesize\small \let\footnoterule\relax
+\begin{center}
+\hbox{}
+\vfill
+{\usesf
+{\huge\bfseries Hier steht der Titel der\\
+                Diplom-/Studien-/Master-/""Bachelorarbeit \par}
+\vskip 1.8cm
+Diplomarbeit/Studienarbeit/Masterarbeit/Bachelorarbeit\\
+von\\[2mm]
+\vskip 1cm
+
+{\large\bfseries Vorname Nachname\\}
+\vskip 1.2cm
+an der Fakultät für Informatik\\
+Institut für Anthropomatik und Robotik\\
+Zentrum für digitale Barrierefreiheit und Assistive Technologien (ACCESS@KIT)
+\vskip 3cm
+\begin{tabular}{p{5.5cm}l}
+Erstgutachter: & \usebox{\Erstgutachter} \\
+Zweitgutachter: & \usebox{\Zweitgutachter} \\
+Betreuender~Mitarbeiter: &  M.Sc. \\
+ & Dr. 
+\end{tabular}
+\vskip 3cm
+Bearbeitungszeit:\qquad ??.~Monat~20?? -- ??.~Monat~20??
+}
+\end{center}
+\vfill
+\end{titlepage}
+%% Titelseite Ende
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "thesis"
+%%% End: 

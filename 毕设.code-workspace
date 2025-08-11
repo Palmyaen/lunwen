@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"name": "82准确度",
+			"path": "../../Downloads/毕设85精准度/82准确度"
+		},
+		{
+			"name": "ACCESS_KIT_Thesis_Vorlage__1_ (3)",
+			"path": "."
+		}
+	],
+	"settings": {
+		"python-envs.defaultEnvManager": "ms-python.python:system"
+	}
+}

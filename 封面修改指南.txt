@@ -1,0 +1,39 @@
+%% 如何修改封面 - 示例
+
+% 以下是你需要修改的部分：
+
+1. 论文标题（第29-30行）：
+   原文：Hier steht der Titel der\\Diplom-/Studien-/Master-/""Bachelorarbeit
+   修改为：你的论文标题（可以分成两行）
+
+2. 论文类型（第32行）：
+   选择：Diplomarbeit/Studienarbeit/Masterarbeit/Bachelorarbeit
+   删除其他，保留你的学位类型
+
+3. 学生姓名（第36行）：
+   原文：Vorname Nachname
+   修改为：你的真实姓名
+
+4. 导师信息（第43-46行）：
+   Erstgutachter: 第一导师
+   Zweitgutachter: 第二导师  
+   Betreuender Mitarbeiter: 指导教师
+
+5. 时间（第49行）：
+   修改开始和结束日期
+
+% 修改示例：
+{\huge\bfseries 基于深度学习的故障诊断系统\\
+                设计与实现 \par}
+\vskip 1.8cm
+Masterarbeit\\
+von\\[2mm]
+\vskip 1cm
+
+{\large\bfseries 张三\\}
+
+% 在文件 titelseite.tex 的开头修改导师信息：
+\newsavebox{\Erstgutachter}
+\savebox{\Erstgutachter}{\usesf Prof.~Dr. 李四}
+\newsavebox{\Zweitgutachter}
+\savebox{\Zweitgutachter}{\usesf Prof.~Dr. 王五}
