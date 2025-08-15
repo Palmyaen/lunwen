@@ -31,6 +31,8 @@
 % Captions: spacing, font, and justification
 \usepackage{caption}
 \usepackage{multirow}
+\usepackage{svg}
+\usepackage{graphicx}
 
 % Below is the list of chapters
 \captionsetup[figure]{skip=6pt,belowskip=8pt,justification=raggedright,singlelinecheck=false}
@@ -166,10 +168,11 @@ anhang
 \nocite{*} % nur angeben, wenn auch nicht im Text zitierte Quellen 
            % erscheinen sollen
 %\bibliographystyle{plain} % 按字母顺序排序，数字标签 [1], [2], [3]
-%\bibliographystyle{unsrt} % 按引用顺序排序，数字标签 [1], [2], [3]
+\bibliographystyle{unsrt} % 按引用顺序排序，数字标签 [1], [2], [3]
+%\bibliographystyle{unsrtnat} % 数字编号 + URL支持
 %\bibliographystyle{accessabbrv} % mit abgekürzten Vornamen der Autoren
 %\bibliographystyle{alpha} % 作者-年份格式，如 [Smi96]
-\bibliographystyle{plainnat} % natbib 作者-年份格式，如 (Smith, 1996)
+%\bibliographystyle{plainnat} % natbib 作者-年份格式，如 (Smith, 1996)
 \bibliography{thesis}
 
 %% ++++++++++++++++++++++++++++++++++++++++++

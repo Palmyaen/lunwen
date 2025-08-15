@@ -1,51 +1,85 @@
 \chapter{Related Technologies and Theoretical Foundations}
 \label{cha:related_technologies}
 
+This chapter provides a comprehensive review of the fundamental technologies and theoretical foundations underlying the proposed hybrid Transformer-LSTM model. The chapter is organized into two main sections that examine the core architectures essential to this research. First, we explore Long Short-Term Memory (LSTM) networks, discussing their gating mechanisms, bidirectional capabilities, and their effectiveness in capturing sequential dependencies in time-series data. Second, we examine the Transformer architecture, focusing on its self-attention mechanism, multi-head attention, and encoder structure that enables parallel processing and global context modeling. Together, these technologies form the theoretical foundation for understanding how their complementary strengths can be combined to create a more robust fault diagnosis system.
+
 \section{Long Short-Term Memory Networks (LSTM)}
 \label{sec:related_technologies:lstm}
 
 This section reviews recurrent neural networks (RNNs) and the challenges of training them, introduces the Long Short-Term Memory (LSTM) architecture and its gating mechanism, discusses the strengths and limitations of LSTMs for time-series modeling, and explains the principle of Bidirectional LSTM (Bi-LSTM).
 
-\subsection{RNN Basics and the Vanishing/Exploding Gradient Problem}
-An RNN processes a sequence \(\mathbf{x}_t\) by maintaining a hidden state \(\mathbf{h}_t\) that is updated recurrently as \(\mathbf{h}_t = \phi(\mathbf{W}_{xh}\,\mathbf{x}_t + \mathbf{W}_{hh}\,\mathbf{h}_{t-1} + \mathbf{b}_h)\), where \(\phi\) is a nonlinearity. Training is typically done via backpropagation through time (BPTT), which unrolls the network over temporal steps. In long sequences, repeated multiplication by Jacobians leads to gradients that either shrink towards zero (vanish) or grow uncontrollably (explode), hampering the learning of long-range dependencies and causing optimization instability \cite{pascanu2013difficulty}. Gradient clipping mitigates exploding gradients, but vanishing gradients remain a central obstacle for standard RNNs to capture dependencies spanning many time steps.
+\subsection{RNN Basics and the Vanishing/Exploding\\ Gradient Problem}
+An RNN processes a sequence \(\mathbf{x}_t\) by maintaining a hidden state \(\mathbf{h}_t\) that is updated recurrently as:
+\begin{equation}
+\mathbf{h}_t = \phi(\mathbf{W}_{xh}\,\mathbf{x}_t + \mathbf{W}_{hh}\,\mathbf{h}_{t-1} + \mathbf{b}_h)
+\label{eq:rnn_update}
+\end{equation}
+where \(\phi\) is a nonlinearity. Training is typically done via backpropagation through time (BPTT), which unrolls the network over temporal steps. In long sequences, repeated multiplication by Jacobians leads to gradients that either shrink towards zero (vanish) or grow uncontrollably (explode), hampering the learning of long-range dependencies and causing optimization instability \cite{pascanu2013difficulty}. Gradient clipping mitigates exploding gradients, but vanishing gradients remain a central obstacle for standard RNNs to capture dependencies spanning many time steps.
 
-More concretely, the gradient across \(k\) steps contains products like \(\prod_{i=1}^{k} \partial \mathbf{h}_{t-i+1}/\partial \mathbf{h}_{t-i}\). When the spectral radius of the recurrent Jacobian is smaller (greater) than one on average, gradients decay (blow up) exponentially with \(k\), which explains why plain RNNs struggle with long-term credit assignment. Practical workarounds include truncated BPTT (limiting the backpropagated horizon), gradient clipping for stability, careful initialization (e.g., orthogonal \(\mathbf{W}_{hh}\)), and using gates or skip/residual connections to create more favorable gradient pathways \cite{pascanu2013difficulty}. These heuristics help but do not fully resolve vanishing gradients in vanilla RNNs, which motivates gated architectures such as the LSTM.
+More concretely, the gradient across \(k\) steps contains products like:
+\begin{equation}
+\prod_{i=1}^{k} \frac{\partial \mathbf{h}_{t-i+1}}{\partial \mathbf{h}_{t-i}}
+\label{eq:gradient_product}
+\end{equation}
+When the spectral radius of the recurrent Jacobian is smaller (greater) than one on average, gradients decay (blow up) exponentially with \(k\), which explains why plain RNNs struggle with long-term credit assignment. Practical workarounds include truncated BPTT (limiting the backpropagated horizon), gradient clipping for stability, careful initialization (e.g., orthogonal \(\mathbf{W}_{hh}\)), and using gates or skip/residual connections to create more favorable gradient pathways \cite{pascanu2013difficulty}. These heuristics help but do not fully resolve vanishing gradients in vanilla RNNs, which motivates gated architectures such as the LSTM.
 
-From a training perspective, backpropagation through time over a window of length \(K\) costs roughly \(\mathcal{O}(K \cdot (d_x d_h + d_h^2))\) per sequence, where \(d_x\) and \(d_h\) are the input and hidden dimensions. Truncated BPTT chooses a moderate \(K\) (e.g., 50--200 steps) to balance long-range learning with computational and memory budgets. Gradient clipping commonly constrains the global norm, e.g., \(\lVert \nabla \rVert_2 \leftarrow \min(\lVert \nabla \rVert_2, \tau)\), to avoid instability when occasional large Jacobian products arise.
+From a training perspective, backpropagation through time over a window of length \(K\) costs roughly:
+\begin{equation}
+\mathcal{O}(K \cdot (d_x d_h + d_h^2))
+\label{eq:bptt_complexity}
+\end{equation}
+per sequence, where \(d_x\) and \(d_h\) are the input and hidden dimensions. Truncated BPTT chooses a moderate \(K\) (e.g., 50--200 steps) to balance long-range learning with computational and memory budgets. Gradient clipping commonly constrains the global norm:
+\begin{equation}
+\lVert \nabla \rVert_2 \leftarrow \min(\lVert \nabla \rVert_2, \tau)
+\label{eq:gradient_clipping}
+\end{equation}
+to avoid instability when occasional large Jacobian products arise.
 
 Finally, activation choices matter: saturating nonlinearities (sigmoid, tanh) have derivatives bounded by \((0, 0.25]\) and \((0, 1]\) respectively, which can compound vanishing; non-saturating alternatives (ReLU) improve gradient flow but complicate recurrent stability and may cause unbounded activations without care. These trade-offs further motivate gated RNNs that provide an explicit additive path for gradients.
 
 \subsection{LSTM Gates and Working Mechanism}
-LSTM networks address vanishing gradients by introducing an additive memory pathway---the cell state \(\mathbf{c}_t\)---and multiplicative gates that regulate information flow \cite{hochreiter1997long}. At each time step, the LSTM computes:
+
+LSTM networks address vanishing gradients by introducing an additive memory pathway---the cell state \(\mathbf{c}_t\)---and multiplicative gates that regulate information flow \cite{hochreiter1997long}. 
+
+\paragraph{Core LSTM Equations.} At each time step, the LSTM computes the following gates and states:
 \begin{align}
 \mathbf{f}_t &= \sigma(\mathbf{W}_f [\mathbf{x}_t, \mathbf{h}_{t-1}] + \mathbf{b}_f) &&\text{(forget gate)}\\
 \mathbf{i}_t &= \sigma(\mathbf{W}_i [\mathbf{x}_t, \mathbf{h}_{t-1}] + \mathbf{b}_i) &&\text{(input gate)}\\
-	ilde{\mathbf{c}}_t &= \tanh(\mathbf{W}_c [\mathbf{x}_t, \mathbf{h}_{t-1}] + \mathbf{b}_c) &&\text{(candidate state)}\\
+\tilde{\mathbf{c}}_t &= \tanh(\mathbf{W}_c [\mathbf{x}_t, \mathbf{h}_{t-1}] + \mathbf{b}_c) &&\text{(candidate state)}\\
 \mathbf{c}_t &= \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t &&\text{(cell update)}\\
 \mathbf{o}_t &= \sigma(\mathbf{W}_o [\mathbf{x}_t, \mathbf{h}_{t-1}] + \mathbf{b}_o) &&\text{(output gate)}\\
 \mathbf{h}_t &= \mathbf{o}_t \odot \tanh(\mathbf{c}_t) &&\text{(hidden state)}
 \end{align}
-Here, \(\sigma\) denotes the logistic sigmoid and \(\odot\) the element-wise product. The key is the cell-state update \(\mathbf{c}_t\), which preserves information through additive interactions modulated by gates, creating a constant error carousel that supports more stable gradient flow across time. Consequently, LSTMs can learn both short- and moderately long-range temporal dependencies that are difficult for vanilla RNNs \cite{hochreiter1997long}.
 
-As illustrated in Figure~\ref{fig:lstm_cell_wiki}, the forget, input, and output gates jointly regulate how information is retained, written, and exposed from the cell state, providing a practical view of the equations above.
+where \(\sigma\) denotes the logistic sigmoid function and \(\odot\) represents element-wise multiplication.
 
-% External figure from Wikipedia (CC BY-SA 4.0) — kept as the only figure in this chapter section
+\paragraph{Key Innovation: Additive Cell State.} The critical innovation lies in the cell-state update equation \(\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t\), which preserves information through additive interactions modulated by gates. This creates a constant error carousel that supports more stable gradient flow across time. Unlike vanilla RNNs that suffer from repeated matrix multiplications during backpropagation, this additive update mechanism provides an almost unattenuated pathway for gradients, enabling LSTMs to learn both short- and moderately long-range temporal dependencies \cite{hochreiter1997long}.
+
+\paragraph{Gate Functions and Information Flow.} As illustrated in Figure~\ref{fig:lstm_cell_diagram}, each gate serves a specific purpose:
+\begin{itemize}
+    \item \textbf{Forget gate} \(\mathbf{f}_t\): Controls what information to discard from the cell state
+    \item \textbf{Input gate} \(\mathbf{i}_t\): Determines which values to update in the cell state
+    \item \textbf{Candidate state} \(\tilde{\mathbf{c}}_t\): Generates new candidate values to be added
+    \item \textbf{Output gate} \(\mathbf{o}_t\): Controls which parts of the cell state to output
+\end{itemize}
+
+The gates jointly regulate how information is retained, written, and exposed from the cell state, providing a practical implementation of the mathematical formulations above.
+
+% External figure referenced above
 \begin{figure}[tbp]
 \centering
-\includegraphics[width=0.7\textwidth]{logos/LSTM_Cell.png}
-\caption[LSTM cell diagram]{LSTM cell diagram (Wikipedia, “Long short-term memory,” File:LSTM\_Cell.svg, CC BY-SA 4.0). Conceptually consistent with \cite{hochreiter1997long}.}
-\label{fig:lstm_cell_wiki}
+\includegraphics[width=0.7\textwidth]{logos/ClassicalLSTM_Diagram.pdf}
+\caption[LSTM cell diagram]{A schematic diagram of the classical long short-term memory (LSTM) cell architecture, showing the three gates (forget, input, output) and the cell state pathway. \cite{chen2020quantumlongshorttermmemory}}
+\label{fig:lstm_cell_diagram}
 \end{figure}
 
-The figure highlights the multiplicative gates (\(\sigma\)) and the additive cell state \(\mathbf{c}_t\). Specifically, the forget gate \(\mathbf{f}_t\) controls forgetting, the input gate \(\mathbf{i}_t\) controls writing of the candidate \(\tilde{\mathbf{c}}_t\), and the output gate \(\mathbf{o}_t\) exposes the updated state to produce \(\mathbf{h}_t\).
+\paragraph{Common Variants and Extensions.} Beyond the basic cell, common variants add peephole connections (letting gates observe \(\mathbf{c}_{t-1}\)/\(\mathbf{c}_t\)), or initialize the forget gate bias positively to encourage longer retention at the start of training. Intuitively, the partial derivative \(\partial \mathbf{c}_t/\partial \mathbf{c}_{t-1} = \mathbf{f}_t\) explains how the forget gate directly scales gradient flow along the cell state pathway; values of \(\mathbf{f}_t\) near one help preserve information and gradients over time.
 
-Beyond the basic cell, common variants add peephole connections (letting gates observe \(\mathbf{c}_{t-1}\)/\(\mathbf{c}_t\)), or initialize the forget gate bias positively to encourage longer retention at the start of training. Intuitively, the partial derivative \(\partial \mathbf{c}_t/\partial \mathbf{c}_{t-1} = \mathbf{f}_t\) explains how the forget gate directly scales gradient flow along the cell state pathway; values of \(\mathbf{f}_t\) near one help preserve information and gradients over time.
+\paragraph{Computational Cost and Practical Considerations.} If \(\mathbf{x}_t \in \mathbb{R}^{d_x}\), \(\mathbf{h}_t, \mathbf{c}_t \in \mathbb{R}^{d_h}\), each gate uses an affine map with parameters of size \(d_h\times(d_x+d_h)\) plus bias. Four such maps imply a per-step cost of order \(\mathcal{O}(d_h(d_x+d_h))\) and memory proportional to activations over time. In practice, mini-batch computation dominates wall time; masking or packed sequences prevent padded timesteps from contributing spurious gradients.
 
-Dimensionalities and cost. If \(\mathbf{x}_t \in \mathbb{R}^{d_x}\), \(\mathbf{h}_t, \mathbf{c}_t \in \mathbb{R}^{d_h}\), each gate uses an affine map with parameters of size \(d_h\times(d_x+d_h)\) plus bias. Four such maps imply a per-step cost of order \(\mathcal{O}(d_h(d_x+d_h))\) and memory proportional to activations over time. In practice, mini-batch computation dominates wall time; masking or packed sequences prevent padded timesteps from contributing spurious gradients.
+\paragraph{Gate Saturation Regimes.} When \(\mathbf{f}_t\) saturates near 1 while \(\mathbf{i}_t \approx 0\), the LSTM behaves as a leaky integrator that retains past information; conversely, \(\mathbf{f}_t\) near 0 forgets rapidly. The output gate \(\mathbf{o}_t\) modulates exposure of the internal memory to downstream layers; throttling \(\mathbf{o}_t\) can stabilize training early on at the cost of slower information throughput.
 
-Saturation regimes. When \(\mathbf{f}_t\) saturates near 1 while \(\mathbf{i}_t \approx 0\), the LSTM behaves as a leaky integrator that retains past information; conversely, \(\mathbf{f}_t\) near 0 forgets rapidly. The output gate \(\mathbf{o}_t\) modulates exposure of the internal memory to downstream layers; throttling \(\mathbf{o}_t\) can stabilize training early on at the cost of slower information throughput.
-\par
-Normalization inside the cell (e.g., layer normalization on gate pre-activations) can reduce covariate shift across time and ease optimization, sometimes enabling larger learning rates. Coupled input–forget gate (CIFG) variants tie \(\mathbf{f}_t = 1-\mathbf{i}_t\) to reduce parameters and encourage complementary behavior; while parameter-efficient, CIFG may be less expressive on tasks requiring independent retention and write controls. Peepholes let gates read the cell state and can improve precise temporal counting.
+\paragraph{Advanced Training Techniques.} Normalization inside the cell (e.g., layer normalization on gate pre-activations) can reduce covariate shift across time and ease optimization, sometimes enabling larger learning rates. Coupled input–forget gate (CIFG) variants tie \(\mathbf{f}_t = 1-\mathbf{i}_t\) to reduce parameters and encourage complementary behavior; while parameter-efficient, CIFG may be less expressive on tasks requiring independent retention and write controls. Peepholes let gates read the cell state and can improve precise temporal counting.
 
 \paragraph{A short gradient derivation.} By unrolling the cell-state update, one obtains
 \begin{align}
@@ -59,14 +93,14 @@ When the forget gates are near one, this multiplicative path preserves gradients
 \subsection{LSTM Variants and Training Techniques}
 Beyond the vanilla cell, a number of practical variants and training techniques are widely adopted to improve optimization stability and efficiency:
 \begin{itemize}
-    \item \textbf{Peephole connections} let gates access the cell state \(\mathbf{c}_{t-1}\) or \(\mathbf{c}_t\) directly, tightening control over precise counting and timing.
-    \item \textbf{Coupled input–forget gate (CIFG)} ties \(\mathbf{f}_t = 1-\mathbf{i}_t\) to reduce parameters and encourage complementary behavior; while parameter-efficient, decoupled gates can be more expressive when retention and writing need to be controlled independently.
-    \item \textbf{Normalization in RNNs} (e.g., layer normalization applied to gate pre-activations) reduces internal covariate shift and can enable larger learning rates and deeper stacks \citep{ba2016layer}.
-    \item \textbf{Recurrent dropout/Zoneout}. Instead of dropping inputs only, apply structured noise on recurrent connections or randomly preserve previous hidden states to regularize temporal dynamics while keeping information flow stable.
-    \item \textbf{Initialization and clipping}. Orthogonal initialization of \(\mathbf{W}_{hh}\), positive bias for forget gates, and global-norm gradient clipping (e.g., 0.5--5.0) are common to mitigate exploding gradients.
-    \item \textbf{Packing/masking}. For variable-length sequences, use padding masks (or packed sequences) to prevent padded steps from contributing to attention, gates, or the loss.
+    \item \textbf{Peephole connections} let gates access the cell state \(\mathbf{c}_{t-1}\) or \(\mathbf{c}_t\) directly, tightening control over precise counting and timing \citep{gers2000learning}. This variant has shown improvements in tasks requiring precise temporal modeling.
+    \item \textbf{Coupled input–forget gate (CIFG)} ties \(\mathbf{f}_t = 1-\mathbf{i}_t\) to reduce parameters and encourage complementary behavior; while parameter-efficient, decoupled gates can be more expressive when retention and writing need to be controlled independently \citep{greff2017lstm}.
+    \item \textbf{Normalization in RNNs} (e.g., layer normalization applied to gate pre-activations) reduces internal covariate shift and can enable larger learning rates and deeper stacks \citep{ba2016layer}. Recent work has shown significant improvements in training stability and convergence speed.
+    \item \textbf{Recurrent dropout/Zoneout}. Instead of dropping inputs only, apply structured noise on recurrent connections or randomly preserve previous hidden states to regularize temporal dynamics while keeping information flow stable \citep{krueger2017zoneout, semeniuta2016recurrent}.
+    \item \textbf{Initialization and clipping}. Orthogonal initialization of \(\mathbf{W}_{hh}\), positive bias for forget gates, and global-norm gradient clipping (e.g., 0.5--5.0) are common to mitigate exploding gradients \citep{pascanu2013difficulty, jozefowicz2015empirical}.
+    \item \textbf{Packing/masking}. For variable-length sequences, use padding masks (or packed sequences) to prevent padded steps from contributing to attention, gates, or the loss \citep{goodfellow2016deep}.
 \end{itemize}
-Stacking 2--3 LSTM layers with residual or skip connections often improves representation power with modest overhead. In industrial time-series, stacking is typically combined with temporal pooling or attention to summarize features for classification.
+Stacking 2--3 LSTM layers with residual or skip connections often improves representation power with modest overhead \citep{he2016deep}. In industrial time-series, stacking is typically combined with temporal pooling or attention to summarize features for classification \citep{zhao2019deep}.
 
 \subsection{Strengths and Limitations for Time-Series Modeling}
 \textbf{Strengths.} LSTMs are effective at modeling sequential dependencies, handling variable-length inputs, and integrating multivariate sensor streams. Their gating mechanism helps filter noise and retain salient temporal patterns, which has led to strong results in industrial time-series fault detection and prediction \cite{filonov2016multivariateindustrialtimeseries, zhao2019deep}. They naturally support many-to-one (sequence classification), many-to-many (sequence labeling), and sequence-to-sequence settings. In practice, padding and masking let LSTMs consume mini-batches of variable-length sequences without corrupting gradients. When paired with dropout/Zoneout and early stopping, LSTMs generalize well on moderately sized datasets.
@@ -98,21 +132,27 @@ Batching & Pad + mask or packed sequences to handle variable length \\
 \centering
 \caption{Qualitative comparison of sequence models for industrial time-series.}
 \label{tab:model_compare}
-\begin{tabular}{l l l l}
+\begin{tabular}{p{2.8cm} p{3.2cm} p{3.2cm} p{3.8cm}}
 \hline
-Aspect & LSTM & GRU & Transformer \\
+\textbf{Aspect} & \textbf{LSTM} & \textbf{GRU} & \textbf{Transformer} \\
 \hline
-Params (per unit) & Higher (4 gates) & Lower (3 gates) & High (attention blocks) \\
-Parallelism & Low (sequential) & Low (sequential) & High (token-parallel) \\
-Long-range deps & Moderate (via gates) & Moderate & Strong with attention \\
-Latency (causal) & Good (uni-dir) & Good (uni-dir) & Moderate (causal masks) \\
-Data hunger & Moderate & Moderate & Higher for stability \\
+Parameters & Higher (4 gates) & Lower (3 gates) & High (attention blocks) \\[0.5ex]
+Parallelism & Low (sequential) & Low (sequential) & High (token-parallel) \\[0.5ex]
+Long-range dependencies & Moderate (via gates) & Moderate & Strong with attention \\[0.5ex]
+Latency (causal) & Good (uni-directional) & Good (uni-directional) & Moderate (causal masks) \\[0.5ex]
+Data requirements & Moderate & Moderate & Higher for stability \\
 \hline
 \end{tabular}
 \end{table}
 
 \subsection{Bidirectional LSTM (Bi-LSTM)}
 Bi-LSTM extends the standard LSTM by running two LSTMs in parallel: one processes the sequence forward (from \(t=1\) to \(T\)) and the other backward (from \(t=T\) to \(1\)). The two hidden representations are then concatenated (or combined) to form a context-enriched feature at each time step. This provides the model with information from both past and future contexts, which often improves performance on sequence classification and labeling tasks where the full sequence is available at inference time. However, Bi-LSTM is not causal and thus unsuitable for strict real-time scenarios that cannot access future observations. In machinery health monitoring and fault diagnosis, Bi-LSTMs have been widely adopted as a strong baseline due to their enhanced context modeling capability \cite{zhang2019deep, zhao2019deep}.
+
+\begin{figure}[!h]
+\centering
+\includegraphics[width=0.8\textwidth]{logos/BI-LSTM.png}
+\caption[Bidirectional LSTM architecture]{A schematic diagram of the bidirectional LSTM (Bi-LSTM) architecture\cite{s21206758}}
+\end{figure}
 
 In practice, Bi-LSTMs are commonly followed by temporal pooling (e.g., max/mean over time) or attention layers to summarize step-wise representations into a fixed-size vector for downstream classification. The bidirectional setup increases parameters and compute compared to a single-direction LSTM, so batch size and sequence length may need tuning to fit memory constraints. For causal or low-latency systems, a uni-directional LSTM (or streaming variants) is preferred.
 
@@ -126,21 +166,21 @@ Conceptually, a Bi-LSTM processes each input step with a forward and a backward 
 \section{Transformer Model}
 \label{sec:related_technologies:transformer}
 
-The Transformer, introduced by \citet{vaswani2017attention}, represents a paradigm shift in sequence modeling, moving away from recurrent architectures and embracing self-attention as its core mechanism. This allows for significantly more parallelization and has established new standards in natural language processing and beyond \citep{zhou2021informer, wen2021review}. This section details the foundational concepts of the Transformer, including the attention mechanism, its multi-head variant, and the overall architecture of the encoder block.
+The Transformer, introduced by \cite{vaswani2017attention}, represents a paradigm shift in sequence modeling, moving away from recurrent architectures and embracing self-attention as its core mechanism. This allows for significantly more parallelization and has established new standards in natural language processing and beyond \citep{zhou2021informer, zhao2019deep}. This section details the foundational concepts of the Transformer, including the attention mechanism, its multi-head variant, and the overall architecture of the encoder block.
 
 \subsection{The Basic Idea of the Attention Mechanism}
 The attention mechanism was developed to address the limitations of fixed-length context vectors in traditional encoder-decoder models, where the decoder had to rely on a single vector summarizing the entire input sequence. Attention provides a solution by allowing the model to dynamically focus on different parts of the input sequence when producing an output at a specific time step.
 
 The core idea is to compute a set of attention weights for each element in the input sequence. These weights determine the importance of each input element relative to the current output position. The final output is then a weighted sum of the input representations, where the weights are the computed attention scores. This mechanism enables the model to selectively draw upon the most relevant information from the input, regardless of its position, thereby improving its ability to handle long-range dependencies.
-Classical formulations of attention in encoder–decoder models trace back to \citet{bahdanau2015neural}, while modern scaled dot-product attention popularized by \citet{vaswani2017attention} enables highly parallel computation.
+Classical formulations of attention in encoder–decoder models trace back to \cite{bahdanau2015neural}, while modern scaled dot-product attention popularized by \cite{vaswani2017attention} enables highly parallel computation.
 
 \subsection{The Calculation Process of the Self-Attention Mechanism}
-Self-attention, also known as intra-attention, is a specific type of attention mechanism that allows a model to weigh the importance of different words within the *same* sequence. Instead of relating an input and an output sequence, it relates different positions of a single sequence to compute a representation of that sequence.
+Self-attention, also known as intra-attention, is a specific type of attention mechanism that allows a model to weigh the importance of different words within the same sequence. Instead of relating an input and an output sequence, it relates different positions of a single sequence to compute a representation of that sequence.
 
 The calculation is based on three vectors derived from each input embedding: the Query (\(\mathbf{Q}\)), the Key (\(\mathbf{K}\)), and the Value (\(\mathbf{V}\)). These vectors are generated by multiplying the input embedding by three distinct weight matrices.
 The process can be summarized in three steps:
 \begin{enumerate}
-    \item \textbf{Compute Scores:} The score for each position is calculated by taking the dot product of the Query vector of the current position with the Key vectors of all other positions in the sequence. This determines how much attention the current position should pay to every other position.
+    \item \textbf{Compute Scores:} The score for each position is calculated by taking the dot product of the Query vector of the current position with the Key vectors of all positions in the sequence. This determines how much attention the current position should pay to every other position.
     \item \textbf{Scale and Normalize:} The scores are scaled down by dividing by the square root of the dimension of the key vectors, \(\sqrt{d_k}\). This scaling prevents the dot products from growing too large and pushing the softmax function into regions with very small gradients. A softmax function is then applied to the scaled scores to obtain the attention weights, which are positive and sum to one.
     \item \textbf{Compute Output:} The final output for the position is a weighted sum of the Value vectors, where the weights are the normalized attention scores from the previous step.
 \end{enumerate}
@@ -155,10 +195,18 @@ A single self-attention mechanism can be limiting, as it only allows the model t
 
 The primary advantages of this approach are:
 \begin{itemize}
-    \item \textbf{Diverse Representations:} Each \"head\" uses different, learned linear projections to transform the input Queries, Keys, and Values. This allows each head to learn to attend to different types of relationships or information from different representation subspaces. For example, one head might learn to capture syntactic relationships, while another focuses on semantic ones.
+    \item \textbf{Diverse Representations:} Each "head" uses different, learned linear projections to transform the input Queries, Keys, and Values. This allows each head to learn to attend to different types of relationships or information from different representation subspaces. For example, one head might learn to capture syntactic relationships, while another focuses on semantic ones.
     \item \textbf{Enriched Feature Combination:} The outputs of all the parallel attention heads are concatenated and passed through a final linear projection. This allows the model to combine the various learned relationships into a single, richer representation for each position.
 \end{itemize}
-In essence, Multi-Head Attention gives the model a broader and more nuanced understanding of the sequence by allowing it to jointly attend to information from different perspectives simultaneously \citep{vaswani2017attention}.
+
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.3\textwidth]{logos/Multi-head.png}
+\caption[Multi-Head Attention mechanism]{Multi-Head Attention consists of several attention layers running in parallel.\cite{vaswani2017attention}}
+\label{fig:multi_head_attention}
+\end{figure}
+
+In essence, Multi-Head Attention gives the model a broader and more nuanced understanding of the sequence by allowing it to jointly attend to information from different perspectives simultaneously \cite{vaswani2017attention}.
 
 \subsection{The Structure of the Transformer's Encoder}
 The Transformer encoder is a stack of identical layers. Each layer is composed of two main sub-layers: a Multi-Head Self-Attention mechanism and a simple, position-wise fully connected Feed-Forward Network (FFN).
@@ -170,6 +218,19 @@ Key components of the encoder architecture include:
     \item \textbf{Residual Connections and Layer Normalization:} Each of the two sub-layers (Multi-Head Attention and FFN) in an encoder layer has a residual connection around it, followed by a layer normalization step. The output of each sub-layer is thus \(\text{LayerNorm}(x + \text{Sublayer}(x))\), where \(\text{Sublayer}(x)\) is the function implemented by the sub-layer itself. These two components are critical for enabling the training of deep Transformer models by stabilizing the learning process and ensuring proper gradient flow \citep{ba2016layer}.
 \end{itemize}
 
+\begin{figure}[tb]
+\centering
+\includegraphics[width=0.5\textwidth]{logos/transformer.png}
+\caption[Transformer encoder architecture]{The structure of the Transformer encoder, showing the multi-head self-attention mechanism, feed-forward network, residual connections, and layer normalization components \cite{vaswani2017attention}.}
+\label{fig:transformer_encoder}
+\end{figure}
+
+As illustrated in Figure~\ref{fig:transformer_encoder}, the Transformer encoder processes input sequences through a stack of identical layers, each containing two main components: a multi-head self-attention mechanism that enables the model to attend to different positions within the sequence, and a position-wise feed-forward network that applies non-linear transformations. The residual connections around each sub-layer, combined with layer normalization, facilitate stable training and effective gradient flow through the deep architecture. This design allows for highly parallelizable computation while capturing complex dependencies across the entire input sequence.
+
+
+
+Table~\ref{tab:efficient_attention} summarizes several prominent approaches to reducing the computational complexity of self-attention mechanisms. While standard Transformer attention requires $\mathcal{O}(T^2 d)$ operations for sequence length $T$ and model dimension $d$, these variants achieve sub-quadratic complexity through different approximation strategies. Linformer reduces complexity by projecting the sequence dimension to a lower rank $r$, Performer employs kernel feature maps to linearize attention computation, and Informer uses sparse attention patterns optimized for long-sequence forecasting tasks. These efficiency improvements are particularly relevant for processing long time-series sequences in industrial applications.
+
 \subsection{Positional Encodings and Masking Variants}
 While fixed sinusoidal encodings are widely used, alternative schemes exist: \emph{learned} absolute positional embeddings, and \emph{relative} position representations that parameterize pairwise bias as a function of offset, often improving generalization to longer sequences and enabling translation invariance in attention \citep{shaw2018self}. For time-series, seasonal patterns can be injected via multi-scale encodings (e.g., combining periodic sinusoids at different frequencies), and \emph{time-delta} channels can inform the model about irregular sampling.\par
 Masking controls information flow. \textbf{Padding masks} prevent attending to padded tokens; \textbf{causal masks} enforce uni-directionality for forecasting/streaming; \textbf{block/local masks} constrain receptive fields to reduce computation while retaining inductive bias for locality.
@@ -177,7 +238,7 @@ Masking controls information flow. \textbf{Padding masks} prevent attending to p
 \subsection{Complexity and Efficient Transformer Variants}
 Full self-attention scales as \(\mathcal{O}(T^2 d)\) in time and \(\mathcal{O}(T^2)\) in memory for sequence length \(T\) and model width \(d\), which can be prohibitive for long signals. A line of work proposes sub-quadratic approximations: \textbf{Linformer} projects Keys/Values to a lower rank along the sequence dimension achieving linear complexity in \(T\) \citep{wang2020linformer}; \textbf{Performer} uses randomized feature maps to approximate softmax attention with linear-time kernel attention \citep{choromanski2021rethinking}; \textbf{Informer} exploits ProbSparse attention and top-$k$ queries to reduce cost in long-horizon forecasting \citep{zhou2021informer}. These designs trade a small approximation error for significant speed/memory savings.
 
-\begin{table}[t]
+\begin{table}[h]
 \centering
 \caption{Selected efficient attention variants (conceptual summary).}
 \label{tab:efficient_attention}
@@ -191,7 +252,7 @@ Informer & ProbSparse/top-$k$ queries & \(\mathcal{O}(T \log T)\) (approx.) \\ \
 \end{table}
 
 \subsection{Architectural Variants for Different Tasks}
-	extbf{Encoder-only} stacks (e.g., BERT-style) suit representation learning and classification; \textbf{decoder-only} stacks with causal masks suit autoregressive modeling and forecasting; \textbf{encoder--decoder} designs enable sequence-to-sequence mapping and cross-attention fusion from context to targets. In industrial fault diagnosis, encoder-only Transformations with a classification head are common; for forecasting, causal decoder-only or encoder--decoder architectures are preferred, with appropriate masking.
+\textbf{Encoder-only} stacks (e.g., BERT-style) suit representation learning and classification; \textbf{decoder-only} stacks with causal masks suit autoregressive modeling and forecasting; \textbf{encoder--decoder} designs enable sequence-to-sequence mapping and cross-attention fusion from context to targets. In industrial fault diagnosis, encoder-only Transformers with a classification head are common; for forecasting, causal decoder-only or encoder--decoder architectures are preferred, with appropriate masking.
 
 
 % --- BEGINNING OF LATEX SECTION ---
@@ -200,12 +261,12 @@ Informer & ProbSparse/top-$k$ queries & \(\mathcal{O}(T \log T)\) (approx.) \\ \
 % \usepackage{amsmath} % 用于数学环境
 % \usepackage{natbib}  % 用于 \citep 等引文命令
 
-\subsection{Key Technologies in Deep Learning}
+\section{Key Technologies in Deep Learning}
 \label{sec:key_technologies}
 
 The success of a deep learning model is not solely dependent on its architecture but is profoundly influenced by the synergistic application of several key technologies during the training process. These technologies guide the model's learning, enhance its efficiency, and ensure its ability to generalize to new, unseen data. This section elaborates on the critical components adopted in this research: the loss function chosen to handle data imbalances, the optimization algorithm that drives model convergence, and the regularization techniques employed to combat overfitting.
 
-\subsubsection{Loss Function: From Cross-Entropy to Focal Loss}
+\subsection{Loss Function: From Cross-Entropy to Focal Loss}
 \label{sec:loss_functions}
 
 The loss function serves as the objective for optimization, quantifying the discrepancy between the model's predictions and the ground truth. A well-chosen loss function is paramount for directing the model's learning toward the desired outcome.
@@ -229,14 +290,14 @@ Here, $p_t$ represents the model's estimated probability for the ground-truth cl
 \end{enumerate}
 By adopting Focal Loss, we equip our model to effectively learn from imbalanced data, ensuring that the rare but crucial fault signatures are not ignored during training.
 
-\subsubsection{Optimization Algorithm: Adam}
+\subsection{Optimization Algorithm: Adam}
 \label{sec:optimizer_adam}
 
 The optimization algorithm is the engine that updates the model's parameters to minimize the loss function. This research utilizes the \textbf{Adam (Adaptive Moment Estimation)} optimizer, a highly effective and widely used algorithm \citep{kingma2014adam}. Adam combines the strengths of two other popular methods: Momentum and RMSprop. It maintains an exponentially decaying average of past gradients (first moment) and past squared gradients (second moment). This allows it to compute individual, adaptive learning rates for different parameters, leading to faster convergence and robust performance across a wide range of deep learning models.
 
 \paragraph{Learning-rate schedules and decoupled weight decay.} Beyond vanilla Adam, \textbf{AdamW} decouples weight decay from the gradient-based update, often yielding better regularization than L2 penalties baked into the loss \citep{loshchilov2019decoupled}. Practical schedules include \textbf{cosine annealing with warm restarts} to escape sharp minima \citep{loshchilov2016sgdr} and the \textbf{OneCycle} policy to traverse a wider range of learning rates/momenta for faster convergence \citep{smith2018superconvergence}. Warmup (a brief linear increase of learning rate at the start) is especially helpful for attention models.
 
-\subsubsection{Regularization Techniques: Dropout and Weight Decay}
+\subsection{Regularization Techniques: Dropout and Weight Decay}
 \label{sec:regularization}
 
 A primary challenge in training deep networks is \textbf{overfitting}. To mitigate this risk, we employ two powerful regularization techniques.
@@ -266,4 +327,4 @@ This penalty encourages the model to find solutions with smaller weights, which 
 \section{Chapter Summary}
 \label{sec:related_technologies:summary}
 
-This chapter introduced core sequence models with a focus on LSTMs. We explained why plain RNNs suffer from vanishing/exploding gradients and how the LSTM’s additive cell state with multiplicative gates alleviates this, enabling learning of longer dependencies. The remaining Figure~\ref{fig:lstm_cell_wiki} illustrated the LSTM cell and its forget/input/output gates, serving as a visual complement to the gating equations. We also discussed LSTM strengths and limitations for time-series tasks and the role of Bi-LSTMs when non-causal, bidirectional context is available.
+This chapter introduced core sequence models with a focus on LSTMs. We explained why plain RNNs suffer from vanishing/exploding gradients and how the LSTM’s additive cell state with multiplicative gates alleviates this, enabling learning of longer dependencies. The remaining Figure~\ref{fig:lstm_cell_diagram} illustrated the LSTM cell and its forget/input/output gates, serving as a visual complement to the gating equations. We also discussed LSTM strengths and limitations for time-series tasks and the role of Bi-LSTMs when non-causal, bidirectional context is available.
