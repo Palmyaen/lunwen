@@ -82,6 +82,10 @@
 %% PDF dependent stuff
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \ifx\pdftexversion\@undefined % kein PDFTeX aktiv
+  \ifx\xetexversion\@undefined % auch kein XeTeX aktiv
+  \else
+    \@usepdftrue % switch automatically to PDF mode for XeLaTeX
+  \fi
 \else
 \@usepdftrue % switch automatically to PDF mode
 \fi
@@ -97,12 +101,29 @@
              hyperindex=true,% 
              plainpages=false,% correct hyperlinks
              pdfpagelabels=true,% view TeX pagenumber in PDF reader
-             pdfborder={0 0 0.5}]{hyperref} % erzeuge Hyperlinks z.B. für pdflatex
+             pdfborder={0 0 0.5}]{hyperref} % erzeuge Hyperlinks z.B. für pdflatex/xelatex
 %\usepackage[CJKbookmarks]{hyperref}
- \usepackage[pdftex]{thumbpdf}
- \pdfcompresslevel=9   % scheint zwar nichts zu bringen, aber was soll's
+ \ifx\pdftexversion\@undefined
+   % XeLaTeX doesn't need thumbpdf
+ \else
+   \usepackage[pdftex]{thumbpdf}
+   \pdfcompresslevel=9   % scheint zwar nichts zu bringen, aber was soll's
+ \fi
 \else
-  \usepackage{nohyperref}
+  % For XeLaTeX and PDFLaTeX, use hyperref instead of nohyperref
+  \usepackage[raiselinks=true,%
+             bookmarks=true,%
+             bookmarksopen=true,%
+             bookmarksnumbered=true,%
+             hyperindex=true,% 
+             plainpages=false,% correct hyperlinks
+             pdfpagelabels=true,% view tex pagenumber in pdf reader
+             pdfborder={0 0 0.5},
+             colorlinks=true,
+             linkcolor=black,
+             citecolor=black,
+             urlcolor=black,
+             linktocpage=false]{hyperref}
 \fi
 
 \newif\if@usehyperref

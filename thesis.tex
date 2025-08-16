@@ -1,4 +1,4 @@
-\documentclass{wissdoc}
+\documentclass[oneside]{wissdoc}
 % ----------------------------------------------------------------
 % Abschlussarbeit - Hauptdokument
 % ----------------------------------------------------------------
@@ -7,7 +7,12 @@
 % wissdoc Optionen: draft, relaxed, pdf --> siehe wissdoc.cls
 % ------------------------------------------------------------------
 % Weitere packages: (Dokumentation dazu durch "latex <package>.dtx")
+% Ensure \@draft is properly defined to avoid conditional statement errors
+\makeatletter
+\let\@draft\@undefined
+\makeatother
 \usepackage[authoryear,sort&compress]{natbib}
+\bibpunct{(}{)}{;}{a}{,}{,}
 
 \usepackage[utf8]{inputenc} % korrekte Darstellung von Umlauten
 \usepackage[T1]{fontenc} % 字体编码支持
@@ -31,8 +36,10 @@
 % Captions: spacing, font, and justification
 \usepackage{caption}
 \usepackage{multirow}
-\usepackage{svg}
+% \usepackage{svg} % 当前未使用SVG文件
 \usepackage{graphicx}
+
+% Hyperref configuration will be handled by wissdoc.cls
 
 % Below is the list of chapters
 \captionsetup[figure]{skip=6pt,belowskip=8pt,justification=raggedright,singlelinecheck=false}
@@ -43,7 +50,7 @@
 % \usepackage{rotating} % Rotation von z.B. Bildern, Tabellen etc.
 % \usepackage{enumitem} % Kontrolle über Layout von itemize, enumerate, description
 % \usepackage{pdfpages} % Seiten aus PDF/ ganzes PDF einbinden
-% \usepackage{newunicodechar} % Bedeutung von Unicode Characters definieren, Nutzung über \newunicodechar{}{}
+% \usepackage{newunicodechar} % Bedeutung von Unicode Characters definieren, Nutzung über \newunicodechar{}{} 
 
 
 % \usepackage{varioref}
@@ -58,10 +65,29 @@
 
 %% Informationen für die PDF-Datei
 \hypersetup{
- pdfauthor={N.N.},
- pdftitle={Not set},
- pdfsubject={Not set},
- pdfkeywords={Not set}
+ pdfauthor={Your Name},
+ pdftitle={Fault Diagnosis Based on Hybrid Transformer-LSTM Architecture},
+ pdfsubject={Industrial Fault Diagnosis using Deep Learning},
+ pdfkeywords={Transformer, LSTM, Fault Diagnosis, Deep Learning, Industrial Applications},
+ pdfcreator={XeLaTeX with hyperref package},
+ pdfproducer={XeLaTeX},
+ hidelinks=false,
+ colorlinks=true,
+ linkcolor=black,
+ citecolor=black,
+ urlcolor=black,
+ bookmarks=true,
+ bookmarksnumbered=true,
+ bookmarksopen=true,
+ breaklinks=true,
+ pdfborder={0 0 0},
+ hyperindex=true,
+ hyperfigures=true,
+ pdfpagemode=UseOutlines,
+ pdfstartview=FitH,
+ plainpages=false,
+ hypertexnames=true,
+ linktocpage=false
 }
 
 % Print URLs not in Typewriter Font
@@ -80,7 +106,7 @@
 % "| = Vermeidung von Ligaturen und mögliche Trennung (bsp: Schaf"|fell)
 % "~ = Bindestrich an dem keine Trennung erlaubt ist (bsp: bergauf und "~ab)
 % "= = Bindestrich bei dem Worte vor und dahinter getrennt werden dürfen
-% "" = Trennstelle ohne Erzeugung eines Trennstrichs (bsp: und/""oder)
+% "" = Trennstelle ohne Erzeugung eines Trennstrichs (bsp: und""oder)
 
 % Trennhinweise fuer Woerter hier beschreiben
 % \hyphenation{
@@ -93,13 +119,13 @@
 % }
 
 % Index-Datei öffnen
-\ifnotdraft{\makeindex}
+\makeindex
 %%%%%%%%%%%%%% includeonly %%%%%%%%%%%%%%%%%%%
 % Es werden nur die Teile eingebunden, die hier 
 % aufgefuehrt sind!
 \includeonly{%
 chapters/Abstract, % Abstract 
-titelseite,%
+titelseite,
 erklaerung,% Declaration page
 chapters/Introduction,% Chapter 1: Introduction
 chapters/related_technologies,% Chapter 2: Related Technologies and Theoretical Foundations
@@ -119,15 +145,13 @@ anhang
 
 \frontmatter
 \pagenumbering{roman}
-\ifnotdraft{
- \include{titelseite}
- \blankpage % Leerseite auf Titelrückseite
- %
- % Die folgende Erklärung ist für Diplomarbeiten Pflicht
- % (siehe Prüfungsordnung), für Studienarbeiten nicht notwendig
- \include{erklaerung}
- \blankpage % Leerseite auf Erklärungsrückseite
-}
+\include{titelseite}
+\blankpage % Leerseite auf Titelrückseite
+%
+% Die folgende Erklärung ist für Diplomarbeiten Pflicht
+% (siehe Prüfungsordnung), für Studienarbeiten nicht notwendig
+\include{erklaerung}
+\blankpage % Leerseite auf Erklärungsrückseite
 %
 %% *************** Hier geht's ab ****************
 \include{chapters/Abstract}
@@ -135,12 +159,14 @@ anhang
 %% Verzeichnisse
 %% ++++++++++++++++++++++++++++++++++++++++++
 \setcounter{tocdepth}{2}
-\ifnotdraft{
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{\contentsname}
 {\parskip 0pt\tableofcontents} % toc bitte einzeilig
-\blankpage
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{\listfigurename}
 \listoffigures
-\blankpage
-}
 
 
 %% ++++++++++++++++++++++++++++++++++++++++++
@@ -167,12 +193,12 @@ anhang
 %%
 \nocite{*} % nur angeben, wenn auch nicht im Text zitierte Quellen 
            % erscheinen sollen
-%\bibliographystyle{plain} % 按字母顺序排序，数字标签 [1], [2], [3]
-\bibliographystyle{unsrt} % 按引用顺序排序，数字标签 [1], [2], [3]
-%\bibliographystyle{unsrtnat} % 数字编号 + URL支持
-%\bibliographystyle{accessabbrv} % mit abgekürzten Vornamen der Autoren
-%\bibliographystyle{alpha} % 作者-年份格式，如 [Smi96]
-%\bibliographystyle{plainnat} % natbib 作者-年份格式，如 (Smith, 1996)
+%
+%
+%
+%
+%
+\bibliographystyle{plainnat} % natbib 作者-年份格式，如 (Smith, 1996)
 \bibliography{thesis}
 
 %% ++++++++++++++++++++++++++++++++++++++++++
@@ -181,7 +207,7 @@ anhang
 
 \appendix
 \include{anhang}
-%\include{anhang_b}
+%
 
 \end{document}
 %% end of file

@@ -5,11 +5,10 @@
 \label{sec:hybrid_model:architecture}
 
 \subsection{Model Overview and Data Flow}
+The core of this research is the Transformer-LSTM Model, a deep learning hybrid architecture specifically designed to extract multi-level temporal features from sequential data for classification tasks. This approach simultaneously leverages the global attention capabilities of Transformer networks with the sequential modeling strengths of LSTM architectures, creating a powerful framework for fault diagnosis applications. Figure~\ref{fig:hybrid_architecture} illustrates the complete architecture of our proposed model, which processes data through two parallel feature extraction pathways before fusing them for final classification.
 
-The core of this research is the \texttt{TransformerLSTMModel}, a deep learning hybrid architecture specifically designed to extract multi-level temporal features from sequential data for classification tasks. This approach simultaneously leverages the global attention capabilities of Transformer networks with the sequential modeling strengths of LSTM architectures, creating a powerful framework for fault diagnosis applications. Figure~\ref{fig:hybrid_architecture} illustrates the complete architecture of our proposed model, which processes data through two parallel feature extraction pathways before fusing them for final classification.
 
 The data processing pipeline operates as follows:
-
 \begin{figure}[p]
 \centering
 \includegraphics[width=0.5\textwidth]{logos/transformer-lstm.png}
@@ -19,32 +18,31 @@ The data processing pipeline operates as follows:
 
 \begin{enumerate}
     \item \textbf{Input Layer}: The model receives raw time-series data, with a shape of \texttt{[Batch, Seq:64, Feat:14]}, representing a batch of sequences, each with a length of 64 time steps and 14 features per step.
-
-    \item \textbf{Parallel Feature Extraction}: The input data is fed into two parallel and independent feature extraction modules to capture different aspects of the temporal information.
-
+    \item \textbf{Input Processing - Dual Pathway Architecture}: The raw input data is duplicated and processed through two parallel pathways:
     \begin{itemize}
-    \item \textbf{Transformer Module (Global Dependencies)}: This branch is designed to capture long-range dependencies across the entire sequence. The input first passes through a \textbf{Positional Encoding \& Dropout} layer to incorporate sequence order information. It is then processed by \textbf{3 stacked Transformer Encoder Layers}, which use self-attention to model the global context and relationships between all time steps.
-
-    \item \textbf{LSTM Module (Sequential Information)}: This branch focuses on capturing local temporal patterns and sequential information. The input is processed by a \textbf{2-Layer Bi-directional LSTM} with an associated \textbf{Dropout} layer. The bidirectional nature allows the model to process information from both past and future contexts at each time step.
+    \item \textbf{Main Processing Path}: The raw input passes through a linear projection layer and layer normalization, mapping the feature dimension to a space suitable for Transformer processing while ensuring training stability.
+    
+    \item \textbf{Skip Connection Path}: The final time-step features of the raw input are preserved as a skip connection, directly passed to the subsequent feature fusion stage to retain critical information from the original signal.
     \end{itemize}
+    
+    \item \textbf{Positional Encoding}: Positional information is added to the normalized input of the main processing path to provide sequence order awareness for the Transformer component.
 
-    \item \textbf{Fusion and Classification Head}: This is a critical stage where features from different pathways are intelligently combined. The process involves several steps:
-    \begin{itemize}
-    \item \textbf{Multi-head Attention (Attention Pooling)}: The output sequence from the LSTM Module is first passed through a Multi-head Attention layer. This layer acts as an \textbf{Attention Pooling} mechanism, which learns to weigh the importance of each time step and aggregates the entire LSTM output sequence into a single, fixed-size context vector that summarizes the most critical sequential information.
+    \item \textbf{Transformer Encoder (Global Feature Extraction)}: The encoded input is processed by \textbf{3 stacked Transformer Encoder Layers}, which use multi-head self-attention to capture long-range dependencies and global context across the entire sequence. This stage provides a rich global representation that forms the foundation for subsequent processing.
 
-    \item \textbf{Feature Gathering and Concatenation}: The model gathers features from three distinct sources. These feature vectors are then concatenated into a single, unified feature vector:
+    \item \textbf{Bidirectional LSTM (Temporal Refinement)}: The Transformer output is then fed into a \textbf{2-Layer Bi-directional LSTM} network with dropout regularization. This stage refines the global features by incorporating local temporal patterns and sequential dependencies, processing information from both past and future contexts at each time step.
+
+    \item \textbf{Self-Attention Pooling}: The LSTM output sequence is processed by a \textbf{Multi-head Attention} mechanism that acts as an attention pooling layer. This learns to weigh the importance of different time steps and aggregates the sequence into a single, fixed-size context vector that captures the most critical temporal information.
+
+    \item \textbf{Feature Fusion and Gate Mechanism}: The model combines features from two key sources:
     \begin{enumerate}
-    \item The output from the \textbf{Transformer Module}.
-    \item The attention-pooled vector from the \textbf{LSTM Module}.
-    \item A direct skip-connection of the \textbf{Original Features} (e.g., the last time step of the input, with shape \texttt{[Batch, 14]}).
+    \item The attention-pooled LSTM output vector that captures processed temporal patterns
+    \item The final time-step features from the original projected input (skip connection) that preserve raw signal characteristics
     \end{enumerate}
+    These features are concatenated and passed through a \textbf{Feature Gate} composed of a linear layer followed by sigmoid activation, which adaptively controls information flow by selectively emphasizing the most relevant features.
 
-    \item \textbf{Feature Gate}: The concatenated feature vector is passed through a \textbf{Feature Gate}, composed of a Linear layer followed by a Sigmoid activation function. This gating mechanism learns to adaptively control the information flow, selectively emphasizing the most relevant features from the combined vector for the final classification task.
+    \item \textbf{Classification Head}: The gated feature vector is processed through a fully connected classification layer with layer normalization, ReLU activation, and dropout for regularization. This maps the fused high-level representation to the final 12-class output space.
 
-    \item \textbf{FC Classification Layer}: The output of the feature gate is fed into a final Fully Connected (FC) classification layer, which includes Layer Normalization, a ReLU activation function, and Dropout for regularization. This layer maps the fused high-level features to the final class output space.
-    \end{itemize}
-
-    \item \textbf{Output Layer}: The model produces the final \textbf{Output Logits}, providing the raw scores for each of the 12 classes. The shape of the output is \texttt{[Batch, Classes:12]}. These logits can then be passed through a Softmax function to obtain class probabilities.
+    \item \textbf{Output Layer}: The model produces \textbf{Output Logits} with shape \texttt{[Batch, Classes:12]}, providing raw scores for each fault category. These logits can be passed through a softmax function to obtain class probabilities for final predictions.
 \end{enumerate}
 
 
@@ -72,7 +70,7 @@ The core design philosophy of this model architecture is "divide and conquer, le
     \end{itemize}
 \end{itemize}
 
-Through this "divide and conquer, leveraging strengths" design, the \texttt{TransformerLSTMModel} can effectively process complex time-series data, capturing both long-range dependencies and global context while finely modeling local temporal patterns, ultimately achieving high-precision classification.
+Through this "divide and conquer, leveraging strengths" design, the Transformer-LSTM Model can effectively process complex time-series data, capturing both long-range dependencies and global context while finely modeling local temporal patterns, ultimately achieving high-precision classification.
 
 \subsection{Mathematical Formulation}
 \label{subsec:mathematical_formulation}
@@ -80,30 +78,20 @@ Through this "divide and conquer, leveraging strengths" design, the \texttt{Tran
 To provide a formal mathematical description of the model architecture, we define the sequential transformations applied to the input data. Given an input time-series sequence $X \in \mathbb{R}^{B \times L \times D}$, where $B$ represents the batch size, $L$ denotes the sequence length (typically 64), and $D$ is the feature dimension (14 for our fault diagnosis dataset), the model processes the data through the following stages:
 
 \begin{align}
-
-$X_{\text{proj}} = \text{LayerNorm}(\text{Linear}(X)) \label{eq:input_projection}
-
-$X_{\text{pos}} = X_{\text{proj}} + \text{PE}(L) \label{eq:positional_encoding}
-
-$H_{\text{trans}} = \text{TransformerEncoder}(X_{\text{pos}}) \label{eq:transformer}
-
-$H_{\text{lstm}} = \text{BiLSTM}(H_{\text{trans}}) \label{eq:lstm}
-
-$H_{\text{attn}} = \text{MultiHeadAttention}(H_{\text{lstm}}, H_{\text{lstm}}, H_{\text{lstm}}) \label{eq:attention}
-
-$H_{\text{fused}} = \text{FeatureGate}([H_{\text{attn}}[-1], X_{\text{proj}}[-1]]) \label{eq:fusion}
-
-$\hat{y} = \text{FC}(H_{\text{fused}}) \label{eq:output}
-
+X_{\text{proj}} = \text{LayerNorm}(\text{Linear}(X)) \label{eq:input_projection} \\
+X_{\text{pos}} = X_{\text{proj}} + \text{PE}(L) \label{eq:positional_encoding} \\
+H_{\text{trans}} = \text{TransformerEncoder}(X_{\text{pos}}) \label{eq:transformer} \\
+H_{\text{lstm}} = \text{BiLSTM}(H_{\text{trans}}) \label{eq:lstm} \\
+H_{\text{attn}} = \text{MultiHeadAttention}(H_{\text{lstm}}, H_{\text{lstm}}, H_{\text{lstm}}) \label{eq:attention} \\
+H_{\text{fused}} = \text{FeatureGate}([H_{\text{attn}}[-1], X_{\text{proj}}[-1]]) \label{eq:fusion} \\
+\hat{y} = \text{FC}(H_{\text{fused}}) \label{eq:output}
 \end{align}
 
 where $\text{PE}(L)$ represents the sinusoidal positional encoding, $H_{\text{attn}}[-1]$ and $X_{\text{proj}}[-1]$ denote the final time-step features from the attention output and projected input respectively, and $\text{FC}$ represents the fully connected classification layers.
 
 The feature gating mechanism is defined as:
 \begin{align}
-
-$\text{FeatureGate}(h_{\text{attn}}, h_{\text{orig}}) = h_{\text{attn}} \odot \sigma(\text{Linear}([h_{\text{attn}}, h_{\text{orig}}])) \label{eq:gate}
-
+\text{FeatureGate}(h_{\text{attn}}, h_{\text{orig}}) = h_{\text{attn}} \odot \sigma(\text{Linear}([h_{\text{attn}}, h_{\text{orig}}])) \label{eq:gate}
 \end{align}
 
 where $\odot$ denotes element-wise multiplication, $\sigma$ is the sigmoid activation function, and $[\cdot, \cdot]$ represents concatenation.
@@ -111,7 +99,7 @@ where $\odot$ denotes element-wise multiplication, $\sigma$ is the sigmoid activ
 \subsection{Model Configuration and Parameters}
 \label{subsec:model_configuration}
 
-Table~\ref{tab:model_config} presents the specific configuration parameters used in our \texttt{TransformerLSTMModel} implementation, optimized for fault diagnosis tasks.
+Table~\ref{tab:model_config} presents the specific configuration parameters used in our Transformer-LSTM Model implementation, optimized for fault diagnosis tasks.
 
 \begin{table}[htbp]
 \centering
@@ -151,7 +139,7 @@ The model contains approximately 2.1 million trainable parameters, making it com
 \subsection{Computational Complexity Analysis}
 \label{subsec:complexity_analysis}
 
-The computational complexity of the \texttt{TransformerLSTMModel} can be analyzed by examining each component:
+The computational complexity of the Transformer-LSTM Model can be analyzed by examining each component:
 
 \begin{itemize}
     \item \textbf{Transformer Encoder}: The self-attention mechanism has complexity $O(L^2 \cdot D)$ for sequence length $L$ and hidden dimension $D$. With 3 layers, the total complexity is $O(3 \cdot L^2 \cdot D)$.
@@ -168,19 +156,16 @@ For our specific configuration with $L = 64$ and $D = 336$, this results in effi
 \section{Data Preprocessing Module}
 \label{sec:hybrid_model:preprocessing}
 
-The data preprocessing module is a critical component that prepares raw machine fault data for effective learning by the hybrid model. This module encompasses several key operations designed to enhance data quality, increase dataset diversity, and ensure optimal model performance \citep{zhang2019deep, liu2018artificial}.
+The data preprocessing module is a critical component that prepares raw machine fault data for effective learning by the hybrid model. This module encompasses several key operations designed to enhance data quality, increase dataset diversity, and ensure optimal model performance \citep{liu2018artificial}.
 
 \subsection{Data Loading and Class Merging}
 \label{subsec:data_loading}
 
 Our fault diagnosis system processes 12 distinct fault categories as defined in the label set:
 \begin{align}
-
-$\mathcal{L} = \{$good, JERK\_A, BACKLASH\_X, JERK\_ALL, \nonumber \\
-
-ALL, JERK\_X, BACKLASH\_Y, BS\_XY, \nonumber \\
-
-BS\_X, JERK\_Y, JERK\_B, BS\_Y\}
+\mathcal{L} = \{\text{good}, \text{JERK\_A}, \text{BACKLASH\_X}, \text{JERK\_ALL}, \nonumber \\
+\text{ALL\_processed}, \text{JERK\_X}, \text{BACKLASH\_Y}, \text{BS\_XY}, \nonumber \\
+\text{BS\_X}, \text{JERK\_Y}, \text{JERK\_B}, \text{BS\_Y}\}
 \end{align}
 
 The preprocessing module consolidates multiple ``good'' condition files (good\_1, good\_2, good\_3) into a single normal operating class, ensuring balanced representation of healthy machine states across different operational scenarios.
@@ -198,10 +183,8 @@ To capture temporal patterns essential for fault diagnosis, the preprocessing mo
 
 The sliding window extraction process can be formalized as:
 \begin{align}
-
-$W_i = X[s_i : s_i + L] \quad \text{for } i = 1, 2, \ldots, N_w \\
-
-$s_i \sim \text{Uniform}(0, T - L)
+W_i = X[s_i : s_i + L] \quad \text{for } i = 1, 2, \ldots, N_w \\
+s_i \sim \text{Uniform}(0, T - L)
 \end{align}
 
 where $W_i$ represents the $i$-th window, $s_i$ is the starting position, $L = 64$ is the window length, $T$ is the total sequence length, and $N_w$ is the number of windows extracted.
@@ -219,8 +202,7 @@ To ensure numerical stability and convergence, the preprocessing module employs 
 
 The robust scaling transformation is defined as:
 \begin{equation}
-
-$X_{\text{scaled}} = \frac{X - \text{median}(X)}{\text{IQR}(X)}
+X_{\text{scaled}} = \frac{X - \text{median}(X)}{\text{IQR}(X)}
 \end{equation}
 
 where IQR represents the interquartile range, providing robustness against outliers commonly present in industrial sensor data.
@@ -252,24 +234,20 @@ The Transformer component begins with input processing that prepares the sequent
 \begin{enumerate}
     \item \textbf{Input Projection}: A linear transformation projects the 14-dimensional sensor readings into the model's hidden dimension:
     \begin{equation}
-
-$X_{\text{proj}} = X \cdot W_{\text{proj}} + b_{\text{proj}}$
+X_{\text{proj}} = X \cdot W_{\text{proj}} + b_{\text{proj}}
 \end{equation}
 
     where $W_{\text{proj}} \in \mathbb{R}^{14 \times 336}$ and $X_{\text{proj}} \in \mathbb{R}^{B \times 64 \times 336}$.
     
     \item \textbf{Layer Normalization}: Applied to stabilize training and improve convergence:
     \begin{equation}
-
-$X_{\text{norm}} = \text{LayerNorm}(X_{\text{proj}})$
+X_{\text{norm}} = \text{LayerNorm}(X_{\text{proj}})
 \end{equation}
     
     \item \textbf{Sinusoidal Positional Encoding}: Since Transformers lack inherent sequential processing, positional information is added:
     \begin{align}
-
-$PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right) \\
-
-$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right)
+PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right) \\
+PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right)
 \end{align}
 
     where $pos$ is the position, $i$ is the dimension index, and $d_{\text{model}} = 336$.
@@ -281,16 +259,13 @@ $PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right)
 The core of the Transformer component employs multi-head self-attention to capture complex relationships between different time steps in the fault signature:
 
 \begin{align}
-
-$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V \\
-
-$\text{MultiHead}(X) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)W^O
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V \\
+\text{MultiHead}(X) = \text{Concat}(\text{head}_1, \ldots, \text{head}_h)W^O
 \end{align}
 
 where each attention head is computed as:
 \begin{equation}
-
-$\text{head}_i = \text{Attention}(XW_i^Q, XW_i^K, XW_i^V)
+\text{head}_i = \text{Attention}(XW_i^Q, XW_i^K, XW_i^V)
 \end{equation}
 
 With 2 attention heads and $d_k = d_v = 168$, the mechanism enables the model to attend to different types of temporal relationships simultaneously.
@@ -300,12 +275,13 @@ With 2 attention heads and $d_k = d_v = 168$, the mechanism enables the model to
 
 Each Transformer layer incorporates position-wise feed-forward networks with residual connections:
 
-\begin{align}
+\begin{equation}
+\text{FFN}(x) = \text{ReLU}(xW_1 + b_1)W_2 + b_2
+\end{equation}
 
-$\text{FFN}(x) = \text{ReLU}(xW_1 + b_1)W_2 + b_2 \\
-
-$\text{TransformerLayer}(x) = \text{LayerNorm}(x + \text{FFN}(\text{LayerNorm}(x + \text{MultiHead}(x))))
-\end{align}
+\begin{equation}
+\text{TransformerLayer}(x) = \text{LayerNorm}(x + \text{FFN}(\text{LayerNorm}(x + \text{MultiHead}(x))))
+\end{equation}
 
 The residual connections facilitate gradient flow during training, while layer normalization ensures stable optimization dynamics.
 
@@ -334,37 +310,12 @@ The LSTM component operates on the globally-enhanced representations from the Tr
 The LSTM component employs a bidirectional architecture with 2 layers, each containing 336 hidden units. The bidirectional design enables the model to process information from both past and future contexts:
 
 \begin{align}
-
-$\overrightarrow{h}_t = \text{LSTM}_{\text{forward}}(x_t, \overrightarrow{h}_{t-1}) \\
-
-$\overleftarrow{h}_t = \text{LSTM}_{\text{backward}}(x_t, \overleftarrow{h}_{t+1}) \\
-
-$h_t = [\overrightarrow{h}_t; \overleftarrow{h}_t]
+\overrightarrow{h}_t = \text{LSTM}_{\text{forward}}(x_t, \overrightarrow{h}_{t-1}) \\
+\overleftarrow{h}_t = \text{LSTM}_{\text{backward}}(x_t, \overleftarrow{h}_{t+1}) \\
+h_t = [\overrightarrow{h}_t; \overleftarrow{h}_t]
 \end{align}
 
 where $h_t \in \mathbb{R}^{672}$ represents the concatenated bidirectional hidden state at time step $t$.
-
-\subsection{LSTM Cell Dynamics}
-\label{subsec:lstm_dynamics}
-
-Each LSTM cell implements the standard gating mechanism to control information flow \citep{hochreiter1997long}:
-
-\begin{align}
-
-$f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f) \quad \text{(forget gate)} \\
-
-$i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i) \quad \text{(input gate)} \\
-
-$\tilde{C}_t = \tanh(W_C \cdot [h_{t-1}, x_t] + b_C) \quad \text{(candidate values)} \\
-
-$C_t = f_t * C_{t-1} + i_t * \tilde{C}_t \quad \text{(cell state)} \\
-
-$o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o) \quad \text{(output gate)} \\
-
-$h_t = o_t * \tanh(C_t) \quad \text{(hidden state)}
-\end{align}
-
-where $\sigma$ represents the sigmoid function, $*$ denotes element-wise multiplication, and $W_{\{f,i,C,o\}}$ are learned weight matrices.
 
 \subsection{Temporal Pattern Extraction}
 \label{subsec:temporal_patterns}
@@ -403,9 +354,7 @@ The feature fusion strategy represents a critical innovation in our hybrid archi
 Before fusion, the LSTM output undergoes an additional attention mechanism to further refine the temporal features:
 
 \begin{align}
-
-$H_{\text{attn}} = \text{MultiHeadAttention}(H_{\text{lstm}}, H_{\text{lstm}}, H_{\text{lstm}}) \\
-
+H_{\text{attn}} = \text{MultiHeadAttention}(H_{\text{lstm}}, H_{\text{lstm}}, H_{\text{lstm}}) \\
 = \text{Concat}(\text{head}_1, \ldots, \text{head}_2)W^O
 \end{align}
 
@@ -419,14 +368,12 @@ The fusion process combines features from two distinct processing pathways:
 \begin{enumerate}
     \item \textbf{Processed Pathway}: The final time-step output from the attention-enhanced LSTM:
     \begin{equation}
-
-$f_{\text{processed}} = H_{\text{attn}}[:, -1, :] \in \mathbb{R}^{B \times 672}$
+f_{\text{processed}} = H_{\text{attn}}[:, -1, :] \in \mathbb{R}^{B \times 672}
 \end{equation}
     
     \item \textbf{Direct Pathway}: The final time-step from the original projected input:
     \begin{equation}
-
-$f_{\text{original}} = X_{\text{proj}}[:, -1, :] \in \mathbb{R}^{B \times 336}$
+f_{\text{original}} = X_{\text{proj}}[:, -1, :] \in \mathbb{R}^{B \times 336}
 \end{equation}
 \end{enumerate}
 
@@ -438,15 +385,12 @@ This dual-pathway approach ensures that both highly processed features and direc
 The core innovation lies in the adaptive gating mechanism that intelligently weights the contribution of different feature sources:
 
 \begin{align}
-
-$f_{\text{concat}} = [f_{\text{processed}}; f_{\text{original}}] \in \mathbb{R}^{B \times 1008} \\
-
-$g = \sigma(W_g \cdot f_{\text{concat}} + b_g) \in \mathbb{R}^{B \times 672} \\
-
-$f_{\text{fused}} = f_{\text{processed}} \odot g
+f_{\text{concat}} = [f_{\text{processed}}; f_{\text{original}}] \in \mathbb{R}^{B \times 1008} \\
+g = \sigma(W_g \cdot f_{\text{concat}} + b_g) \in \mathbb{R}^{B \times 672} \\
+f_{\text{fused}} = f_{\text{processed}} \odot g
 \end{align}
 
-where $W_g \in \mathbb{R}^{672 \times 1008}$ is the gating weight matrix, $\sigma$ is the sigmoid activation, and $\odot$ represents element-wise multiplication.
+where $W_g \in \mathbb{R}^{672 \times 1008}$ is the linear transformation matrix that maps the concatenated 1008-dimensional features to 672-dimensional gate values, $\sigma$ is the sigmoid activation function, and $\odot$ represents element-wise multiplication. The bias term $b_g \in \mathbb{R}^{672}$ provides learned offsets for each gate dimension.
 
 \subsection{Adaptive Weight Learning}
 \label{subsec:adaptive_weights}
@@ -472,12 +416,12 @@ The adaptive fusion strategy addresses several challenges in fault diagnosis:
     \item \textbf{Robustness Enhancement}: The dual-pathway design provides redundancy against feature degradation
 \end{enumerate}
 
-The fused feature vector $f_{\text{fused}} \in \mathbb{R}^{B \times 672}$ serves as input to the final classification layers, containing rich representations that capture both global context and local temporal patterns essential for accurate fault diagnosis.
+The fused feature vector $f_{\text{fused}} \in \mathbb{R}^{B \times 672}$ serves as input to the final classification layers, containing rich representations that capture both global context and local temporal patterns essential for accurate fault diagnosis. This 672-dimensional representation is subsequently mapped to the final classification output through additional fully-connected layers.
 
 \section{Model Training and Optimization Strategy}
 \label{sec:hybrid_model:training_optimization}
 
-The training strategy for the \texttt{TransformerLSTMModel} incorporates several advanced optimization techniques designed to achieve stable convergence, prevent overfitting, and maximize performance on the fault diagnosis task.
+The training strategy for the Transformer-LSTM Model incorporates several advanced optimization techniques designed to achieve stable convergence, prevent overfitting, and maximize performance on the fault diagnosis task.
 
 \subsection{Loss Function and Class Balancing}
 \label{subsec:loss_function}
@@ -485,14 +429,10 @@ The training strategy for the \texttt{TransformerLSTMModel} incorporates several
 Given the inherent class imbalance in fault diagnosis datasets, we employ a Focal Loss function combined with class weighting:
 
 \begin{align}
-
-$\text{FL}(p_t) = -\alpha_t(1-p_t)^{\gamma}\log(p_t) \\
-
-$\alpha_t = \begin{cases} 
-
-$\alpha$ & \text{if } y = 1 \\
-
-$1-\alpha$ & \text{otherwise}
+\text{FL}(p_t) = -\alpha_t(1-p_t)^{\gamma}\log(p_t) \\
+\alpha_t = \begin{cases} 
+\alpha & \text{if } y = 1 \\
+1-\alpha & \text{otherwise}
 \end{cases}
 \end{align}
 
@@ -500,8 +440,7 @@ where $p_t$ is the model's estimated probability for the ground truth class, $\a
 
 Class weights are computed using inverse frequency weighting:
 \begin{equation}
-
-$w_i = \frac{n_{\text{total}}}{n_{\text{classes}} \times n_i}$
+w_i = \frac{n_{\text{total}}}{n_{\text{classes}} \times n_i}
 \end{equation}
 
 where $n_i$ is the number of samples in class $i$.
@@ -509,7 +448,7 @@ where $n_i$ is the number of samples in class $i$.
 \subsection{Optimizer Configuration}
 \label{subsec:optimizer}
 
-The model employs the AdamW optimizer with the following configuration:
+The model employs the AdamW optimizer \citep{loshchilov2019decoupled} with the following configuration:
 
 \begin{itemize}
     \item \textbf{Learning Rate}: $\eta = 6 \times 10^{-4}$
@@ -518,34 +457,29 @@ The model employs the AdamW optimizer with the following configuration:
     \item \textbf{Epsilon}: $\epsilon = 10^{-8}$
 \end{itemize}
 
-AdamW decouples weight decay from gradient-based updates, providing better generalization:
+AdamW decouples weight decay from gradient-based updates, providing better generalization \citep{loshchilov2019decoupled}:
 \begin{align}
-
-$m_t = \beta_1 m_{t-1} + (1-\beta_1)g_t \\
-
-$v_t = \beta_2 v_{t-1} + (1-\beta_2)g_t^2 \\
-
-$\theta_t = \theta_{t-1} - \eta\left(\frac{m_t}{\sqrt{v_t} + \epsilon} + \lambda\theta_{t-1}\right)
+m_t = \beta_1 m_{t-1} + (1-\beta_1)g_t \\
+v_t = \beta_2 v_{t-1} + (1-\beta_2)g_t^2 \\
+\theta_t = \theta_{t-1} - \eta\left(\frac{m_t}{\sqrt{v_t} + \epsilon} + \lambda\theta_{t-1}\right)
 \end{align}
 
 \subsection{Learning Rate Scheduling}
 \label{subsec:lr_scheduling}
 
-A sophisticated learning rate schedule combines warmup and cosine annealing:
+A sophisticated learning rate schedule combines warmup and cosine annealing \citep{loshchilov2016sgdr, smith2018superconvergence}:
 
 \begin{enumerate}
     \item \textbf{Warmup Phase} (epochs 1-10):
     \begin{equation}
-
-$\eta_t = \eta_{\text{start}} + \frac{(\eta_{\text{max}} - \eta_{\text{start}}) \times t}{T_{\text{warmup}}}$
+\eta_t = \eta_{\text{start}} + \frac{(\eta_{\text{max}} - \eta_{\text{start}}) \times t}{T_{\text{warmup}}}
 \end{equation}
 
     where $\eta_{\text{start}} = 1.8 \times 10^{-5}$ and $\eta_{\text{max}} = 6 \times 10^{-4}$.
     
     \item \textbf{Cosine Annealing} (epochs 11-150):
     \begin{equation}
-
-$\eta_t = \eta_{\text{min}} + \frac{1}{2}(\eta_{\text{max}} - \eta_{\text{min}})\left(1 + \cos\left(\frac{t - T_{\text{warmup}}}{T_{\text{max}} - T_{\text{warmup}}}\pi\right)\right)
+\eta_t = \eta_{\text{min}} + \frac{1}{2}(\eta_{\text{max}} - \eta_{\text{min}})\left(1 + \cos\left(\frac{t - T_{\text{warmup}}}{T_{\text{max}} - T_{\text{warmup}}}\pi\right)\right)
 \end{equation}
 \end{enumerate}
 
@@ -555,8 +489,8 @@ $\eta_t = \eta_{\text{min}} + \frac{1}{2}(\eta_{\text{max}} - \eta_{\text{min}})
 Multiple regularization strategies prevent overfitting:
 
 \begin{itemize}
-    \item \textbf{Dropout}: Applied with rate 0.22 in Transformer and LSTM layers
-    \item \textbf{Layer Normalization}: Stabilizes training and acts as implicit regularization
+    \item \textbf{Dropout}: Applied with rate 0.22 in Transformer and LSTM layers \citep{srivastava2014dropout}
+    \item \textbf{Layer Normalization}: Stabilizes training and acts as implicit regularization \citep{ba2016layer}
     \item \textbf{Weight Decay}: L2 regularization through AdamW optimizer
     \item \textbf{Early Stopping}: Training halts when validation loss stops improving for 30 epochs
     \item \textbf{Gradient Clipping}: Prevents exploding gradients with maximum norm of 1.0
@@ -568,7 +502,7 @@ Multiple regularization strategies prevent overfitting:
 Several advanced techniques enhance training efficiency and model performance:
 
 \begin{enumerate}
-    \item \textbf{Mixed Precision Training}: Utilizes automatic mixed precision (AMP) to reduce memory usage and accelerate training on CUDA devices
+    \item \textbf{Mixed Precision Training}: Utilizes automatic mixed precision (AMP) to reduce memory usage and accelerate training on CUDA devices \citep{micikevicius2017mixed}
     
     \item \textbf{Data Augmentation}: Applied during training with probability-based augmentation including techniques commonly used in time-series analysis \citep{wen2021time}:
     \begin{itemize}
@@ -585,7 +519,7 @@ Several advanced techniques enhance training efficiency and model performance:
 \subsection{Training Configuration Summary}
 \label{subsec:training_summary}
 
-Table~\ref{tab:training_config} summarizes the complete training configuration used for the \texttt{TransformerLSTMModel}.
+Table~\ref{tab:training_config} summarizes the complete training configuration used for the Transformer-LSTM Model.
 
 \begin{table}[h]
 \centering
@@ -603,7 +537,7 @@ Warmup Epochs & 10 \\
 Early Stopping Patience & 30 \\
 Dropout Rate & 0.22 \\
 Gradient Clipping & 1.0 \\
-Loss Function & Focal Loss ($\gamma=2.0$) \citep{lin2017focal} \\
+Loss Function & Focal Loss ($\gamma=2.0$) \\
 Data Split & 70\%/15\%/15\% (Train/Val/Test) \\
 \hline
 \end{tabular}
@@ -614,60 +548,20 @@ This comprehensive training strategy ensures robust optimization while maintaini
 \section{Chapter Summary}
 \label{sec:hybrid_model:summary}
 
-This chapter presented a comprehensive description of the proposed \texttt{TransformerLSTMModel}, a novel hybrid architecture specifically designed for fault diagnosis in industrial systems. The key contributions and design elements can be summarized as follows:
+This chapter presents a novel Transformer-LSTM hybrid architecture for industrial fault diagnosis, integrating global context awareness with local temporal pattern recognition.
 
-\subsection{Architectural Innovation}
-\label{subsec:architectural_innovation}
+The core innovation lies in the adaptive feature fusion strategy that dynamically balances Transformer-derived global features and LSTM-captured sequential patterns through a learnable gating mechanism.
 
-The hybrid architecture successfully combines the complementary strengths of Transformer and LSTM networks:
-
-\begin{itemize}
-    \item \textbf{Global Feature Extraction}: The 3-layer Transformer encoder with multi-head self-attention captures long-range dependencies and global contextual information across the entire fault signature sequence
-    \item \textbf{Sequential Pattern Modeling}: The bidirectional LSTM component excels at modeling local temporal dependencies and sequential fault evolution patterns
-    \item \textbf{Intelligent Feature Fusion}: The adaptive gating mechanism enables dynamic weighting of features from different processing pathways, optimizing the contribution of global and local representations
-\end{itemize}
-
-\subsection{Technical Contributions}
-\label{subsec:technical_contributions}
-
-Several technical innovations distinguish this work:
+Key technical contributions include:
 
 \begin{enumerate}
-    \item \textbf{Dual-Pathway Processing}: The model processes information through both deep feature extraction (Transformer$\rightarrow$LSTM$\rightarrow$Attention) and direct pathways, preserving critical information while enabling complex feature learning
-    
-    \item \textbf{Adaptive Fusion Strategy}: The learnable gating mechanism automatically adjusts the relative importance of different feature sources based on the specific characteristics of each fault type
-    
-    \item \textbf{Comprehensive Preprocessing}: The data preprocessing module incorporates sliding window generation, robust normalization, and sophisticated data augmentation techniques tailored for fault diagnosis
-    
-    \item \textbf{Optimized Training Strategy}: The training methodology combines focal loss for class balancing, advanced learning rate scheduling, and multiple regularization techniques to ensure robust convergence
+    \item \textbf{Dual-pathway processing}: Preserving both deep-extracted and original features through parallel processing pathways
+    \item \textbf{Multi-head attention enhancement}: Applying multi-head attention on LSTM outputs for enhanced temporal feature refinement
+    \item \textbf{Comprehensive preprocessing}: Implementing sliding window generation and data augmentation for robust feature extraction
+    \item \textbf{Optimized training strategy}: Combining focal loss, AdamW optimization, and cosine annealing scheduling for stable convergence
 \end{enumerate}
 
-\subsection{Model Capabilities}
-\label{subsec:model_capabilities}
+The model achieves multi-scale temporal analysis with computational efficiency ($O(L^2 \cdot D + L \cdot D^2)$) and approximately 2.1M parameters, making it suitable for real-time industrial applications.
 
-The \texttt{TransformerLSTMModel} demonstrates several key capabilities:
+Its scalability allows adaptation to various fault diagnosis scenarios through adjustable input channels and output classes.
 
-\begin{itemize}
-    \item \textbf{Multi-Scale Temporal Analysis}: Captures both short-term transients and long-term fault development patterns through the hierarchical architecture
-    \item \textbf{Cross-Channel Correlation}: The self-attention mechanism enables modeling of complex relationships between different sensor modalities
-    \item \textbf{Robust Feature Learning}: The combination of multiple architectural components provides redundancy and robustness against noise and sensor failures
-    \item \textbf{Computational Efficiency}: With approximately 2.1 million parameters and optimized complexity of $O(L^2 \cdot D + L \cdot D^2)$, the model maintains efficiency suitable for real-time applications
-\end{itemize}
-
-\subsection{Implementation Considerations}
-\label{subsec:implementation_considerations}
-
-The practical implementation incorporates several important design decisions:
-
-\begin{itemize}
-    \item \textbf{Parameter Optimization}: The model configuration (336 hidden dimensions, 3 Transformer layers, 2 LSTM layers) represents an optimal balance between model capacity and computational efficiency
-    \item \textbf{Scalability}: The architecture can be easily adapted to different fault diagnosis scenarios by adjusting the number of input channels and output classes
-    \item \textbf{Training Stability}: The comprehensive regularization strategy and learning rate scheduling ensure stable training across different datasets and hardware configurations
-\end{itemize}
-
-\subsection{Foundation for Experimental Validation}
-\label{subsec:foundation_experimental}
-
-This chapter establishes the theoretical and architectural foundation for the experimental validation presented in the following chapters. The detailed mathematical formulation, component descriptions, and training strategies provide the necessary background for understanding the model's performance characteristics and comparative advantages in fault diagnosis applications.
-
-The hybrid architecture represents a significant advancement in deep learning approaches to fault diagnosis, combining the best aspects of attention-based and recurrent neural networks while addressing the specific challenges of industrial time-series analysis \citep{lei2020applications, zhang2019deep}. The following chapter will demonstrate the practical effectiveness of this approach through comprehensive experimental evaluation on real industrial fault diagnosis datasets.

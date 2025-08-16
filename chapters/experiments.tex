@@ -7,16 +7,17 @@
 The foundation of this research is a comprehensive dataset, referred to as \texttt{Dataset\_1}, captured from a multi-axis CNC machine tool. This dataset is designed to reflect real-world manufacturing scenarios, encompassing both normal operational states and several distinct, commonly encountered fault conditions.
 
 \subsection{Data Sources and Sensor Signals}
-The data was collected from the machine's controller, recording key kinematic parameters over time. The dataset comprises multivariate time-series data from 12 distinct sensor channels, which are crucial for monitoring the machine's health status. These channels include:
+The data was collected from a multi-axis CNC machine tool's control system, capturing comprehensive operational parameters during various machining processes. The dataset comprises multivariate time-series data with 14 distinct feature channels, which provide a holistic view of the machine's operational state and health condition. These features include:
 
 \begin{itemize}
-    \item \textbf{Position}: \texttt{X\_ActualPosition}, \texttt{Y\_ActualPosition}, \texttt{Z\_ActualPosition}
-    \item \textbf{Velocity}: \texttt{X\_ActualVelocity}, \texttt{Y\_ActualVelocity}, \texttt{Z\_ActualVelocity}
-    \item \textbf{Acceleration}: \texttt{X\_ActualAcceleration}, \texttt{Y\_ActualAcceleration}, \texttt{Z\_ActualAcceleration}
-    \item \textbf{Jerk}: \texttt{X\_Jerk}, \texttt{Y\_Jerk}, \texttt{Z\_Jerk}
+    \item \textbf{Control Signals}: \texttt{ControlDifference\_X}, representing control system deviations
+    \item \textbf{Current Measurements}: \texttt{Cur\_X}, \texttt{Cur\_Y}, \texttt{Cur\_A}, \texttt{Cur\_B}, capturing motor current characteristics
+    \item \textbf{Position and Velocity}: Multiple channels tracking axis movement and speed parameters
+    \item \textbf{System Status}: Additional operational parameters including \texttt{V\_X}, \texttt{V\_Y}, and other diagnostic signals
+    \item \textbf{Temporal Information}: \texttt{time} and \texttt{LineNumber} for sequence indexing
 \end{itemize}
 
-This rich set of features provides a detailed representation of the machine's dynamic behavior, enabling the detection of subtle anomalies.
+This comprehensive feature set captures the machine's dynamic behavior across multiple dimensions, including control system performance, electrical characteristics, mechanical motion, and operational status. The multi-modal nature of the data enables the detection of various fault patterns and anomalies that manifest across different aspects of machine operation.
 
 \subsection{Fault Categories and Physical Meanings}
 The dataset is categorized into one normal class and three primary fault classes. Each fault type has a distinct physical manifestation that impacts machining quality:
@@ -152,7 +153,7 @@ The experimental configuration ensures reproducibility through fixed random seed
 \section{Evaluation Metrics}
 \label{sec:experiments:metrics}
 
-To comprehensively assess the performance of our \texttt{TransformerLSTMModel} in the context of fault diagnosis, we employ a diverse set of evaluation metrics \citep{hastie2009elements, he2009learning}. These metrics are specifically chosen to address the challenges posed by the class imbalanced nature of our dataset and to provide insights into different aspects of model performance \citep{krawczyk2016learning, chawla2002smote}. This section defines each metric, explains its calculation methodology, and justifies its relevance for fault diagnosis applications.
+To comprehensively assess the performance of our Transformer-LSTM Model in the context of fault diagnosis, we employ a diverse set of evaluation metrics \citep{hastie2009elements, he2009learning}. These metrics are specifically chosen to address the challenges posed by the class imbalanced nature of our dataset and to provide insights into different aspects of model performance \citep{krawczyk2016learning, chawla2002smote}. This section defines each metric, explains its calculation methodology, and justifies its relevance for fault diagnosis applications.
 
 \subsection{Primary Classification Metrics}
 \label{subsec:primary_metrics}
@@ -349,17 +350,17 @@ Our evaluation follows a rigorous protocol to ensure reliable and reproducible r
     \item \textbf{Statistical Significance}: Multiple evaluation runs with different random seeds to assess result stability
 \end{enumerate}
 
-The comprehensive evaluation framework ensures that our model performance assessment is both thorough and reliable, providing meaningful insights into the \texttt{TransformerLSTMModel}'s effectiveness for industrial fault diagnosis applications.
+The comprehensive evaluation framework ensures that our model performance assessment is both thorough and reliable, providing meaningful insights into the Transformer-LSTM Model's effectiveness for industrial fault diagnosis applications.
 
 \section{Experimental Results and Analysis}
 \label{sec:experiments:results_analysis}
 
-This section presents the comprehensive experimental results of the proposed \texttt{TransformerLSTMModel} on the industrial machine fault diagnosis dataset. The analysis includes overall performance metrics, confusion matrix interpretation, learning curve examination, and ROC/PR curve evaluation to provide a thorough understanding of the model's capabilities and limitations.
+This section presents the comprehensive experimental results of the proposed Transformer-LSTM Model on the industrial machine fault diagnosis dataset. The analysis includes overall performance metrics, confusion matrix interpretation, learning curve examination, and ROC/PR curve evaluation to provide a thorough understanding of the model's capabilities and limitations.
 
 \subsection{Overall Performance Results}
 \label{subsec:overall_performance}
 
-Table~\ref{tab:overall_performance} summarizes the comprehensive performance evaluation of the \texttt{TransformerLSTMModel} on the test dataset. The results demonstrate the model's effectiveness across multiple evaluation metrics, particularly highlighting its strong performance in handling the multi-class fault diagnosis task.
+Table~\ref{tab:overall_performance} summarizes the comprehensive performance evaluation of the Transformer-LSTM Model on the test dataset. The results demonstrate the model's effectiveness across multiple evaluation metrics, particularly highlighting its strong performance in handling the multi-class fault diagnosis task.
 
 \begin{table}[ht]
 \centering
@@ -417,7 +418,7 @@ Figure~\ref{fig:normalized_confusion_matrix} presents the normalized confusion m
 
 \textbf{Strong Performance Categories:}
 
-The confusion matrix reveals several categories where the \texttt{TransformerLSTMModel} achieves particularly strong performance:
+The confusion matrix reveals several categories where the Transformer-LSTM Model achieves particularly strong performance:
 
 \begin{itemize}
     \item \textbf{Perfect Normal Condition Classification}: The model achieves perfect classification (1.00) for the "good" class, demonstrating exceptional ability to identify normal operating conditions. This perfect performance indicates that the hybrid architecture effectively captures the distinct temporal patterns in healthy machine operation through its attention mechanisms and sequential modeling capabilities.
@@ -461,7 +462,7 @@ The observed confusion patterns provide valuable insights into the underlying me
     \item \textbf{Feature Discrimination Success}: Despite the mechanical complexity, the model achieves strong overall performance by learning discriminative temporal and spectral features. The Transformer component's attention mechanism appears particularly effective at identifying fault-specific patterns, while the LSTM component captures the sequential evolution of fault signatures.
 \end{itemize}
 
-The detailed confusion matrix analysis demonstrates that while certain mechanically similar fault types present expected challenges, the \texttt{TransformerLSTMModel} successfully learns to distinguish between most fault categories with high accuracy, making it highly suitable for practical industrial fault diagnosis applications \citep{he2009learning}.
+The detailed confusion matrix analysis demonstrates that while certain mechanically similar fault types present expected challenges, the Transformer-LSTM Model successfully learns to distinguish between most fault categories with high accuracy, making it highly suitable for practical industrial fault diagnosis applications \citep{he2009learning}.
 
 \subsection{Learning Curve Analysis}
 \label{subsec:learning_curve_analysis}
@@ -564,7 +565,7 @@ Analysis of individual category curves reveals:
     \item \textbf{Multi-Axis Fault Complexity}: Faults affecting multiple axes show slightly lower but still strong performance, reflecting the increased complexity of multi-dimensional fault patterns that require sophisticated feature interactions captured by the Transformer-LSTM combination.
 \end{itemize}
 
-The comprehensive ROC and PR analysis confirms that the \texttt{TransformerLSTMModel} provides robust and reliable fault classification performance suitable for industrial deployment, with consistent high performance across different fault types and operating conditions \citep{he2009learning, krawczyk2016learning}.
+The comprehensive ROC and PR analysis confirms that the Transformer-LSTM Model provides robust and reliable fault classification performance suitable for industrial deployment, with consistent high performance across different fault types and operating conditions \citep{he2009learning, krawczyk2016learning}.
 
 \section{Ablation Study}
 \label{sec:experiments:ablation_study}
