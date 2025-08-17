@@ -10,14 +10,15 @@ The foundation of this research is a comprehensive dataset, referred to as \text
 The data was collected from a multi-axis CNC machine tool's control system, capturing comprehensive operational parameters during various machining processes. The dataset comprises multivariate time-series data with 14 distinct feature channels, which provide a holistic view of the machine's operational state and health condition. These features include:
 
 \begin{itemize}
-    \item \textbf{Control Signals}: \texttt{ControlDifference\_X}, representing control system deviations
-    \item \textbf{Current Measurements}: \texttt{Cur\_X}, \texttt{Cur\_Y}, \texttt{Cur\_A}, \texttt{Cur\_B}, capturing motor current characteristics
-    \item \textbf{Position and Velocity}: Multiple channels tracking axis movement and speed parameters
-    \item \textbf{System Status}: Additional operational parameters including \texttt{V\_X}, \texttt{V\_Y}, and other diagnostic signals
-    \item \textbf{Temporal Information}: \texttt{time} and \texttt{LineNumber} for sequence indexing
+    \item \textbf{Control Deviation Signals}: \texttt{ControlDifference\_X}, \texttt{ControlDifference\_Y}, \texttt{ControlDifference\_A}, \texttt{ControlDifference\_B}, representing control system deviations for each axis
+    \item \textbf{Current Measurements}: \texttt{Cur\_Y}, \texttt{Cur\_A}, \texttt{Cur\_B}, \texttt{Cur\_SP}, capturing motor current characteristics for Y-axis, A-axis, B-axis and setpoint current
+    \item \textbf{Position Commands}: \texttt{Pos\_X\_cmd}, \texttt{Pos\_A\_cmd}, representing position command signals for X-axis and A-axis
+    \item \textbf{Contour Deviations}: \texttt{ContourDeviation\_X}, \texttt{ContourDeviation\_Y},\newline
+    \hspace*{1.5em}\texttt{ContourDeviation\_A},\newline
+    representing contour machining deviations for X-axis, Y-axis, and A-axis
 \end{itemize}
 
-This comprehensive feature set captures the machine's dynamic behavior across multiple dimensions, including control system performance, electrical characteristics, mechanical motion, and operational status. The multi-modal nature of the data enables the detection of various fault patterns and anomalies that manifest across different aspects of machine operation.
+This comprehensive feature set captures the machine's dynamic behavior across multiple dimensions, including control system performance, electrical characteristics, mechanical motion precision, and machining quality. The multi-modal nature of the data enables the detection of various fault patterns and anomalies that manifest across different aspects of machine operation. The time series data is collected at a 2ms sampling interval, ensuring high-precision monitoring of the machine's dynamic behavior. Note that \texttt{time} and \texttt{LineNumber} are used for time series indexing but are not considered as input features for the model.
 
 \subsection{Fault Categories and Physical Meanings}
 The dataset is categorized into one normal class and three primary fault classes. Each fault type has a distinct physical manifestation that impacts machining quality:
@@ -27,6 +28,13 @@ The dataset is categorized into one normal class and three primary fault classes
     \item \textbf{Ball Screw Degradation (BS)}: This fault signifies wear, friction, or other forms of degradation in the ball screw mechanism, which is responsible for converting rotational motion into precise linear motion. Such degradation can lead to reduced accuracy and surface finish defects.
     \item \textbf{Jerk Anomaly}: Refers to an abnormally high rate of change in acceleration. In a CNC machine, this can be caused by abrupt changes in tool path, control signal instability, or mechanical vibrations, indicating unsmooth operation that can compromise the workpiece.
 \end{itemize}
+
+Our fault diagnosis system processes 12 distinct fault categories as defined in the label set:
+\begin{align}
+\mathcal{L} = \{\text{good}, \text{JERK\_A}, \text{BACKLASH\_X}, \text{JERK\_ALL}, \nonumber \\
+\text{ALL\_processed}, \text{JERK\_X}, \text{BACKLASH\_Y}, \text{BS\_XY}, \nonumber \\
+\text{BS\_X}, \text{JERK\_Y}, \text{JERK\_B}, \text{BS\_Y}\}
+\end{align}
 
 \subsection{Class Distribution and Imbalance}
 A critical characteristic of this dataset is the significant class imbalance, which is typical for real-world fault diagnosis scenarios where faulty states are much rarer than normal operation. Figure~\ref{fig:class_distribution_merged} illustrates the distribution of data samples across the four categories.
@@ -38,7 +46,7 @@ A critical characteristic of this dataset is the significant class imbalance, wh
     \label{fig:class_distribution_merged}
 \end{figure}
 
-The 'good' class contains a substantially larger number of samples compared to any of the fault classes. This imbalance poses a challenge for training a classification model, as the model might develop a bias towards the majority class. Therefore, addressing this imbalance through techniques like data augmentation, resampling, or specialized loss functions is a key consideration in the model development process, as will be discussed in Chapter~\ref{cha:hybrid_model}.
+The 'good' class contains a substantially larger number of samples compared to any of the fault classes. This imbalance poses a challenge for training a classification model, as the model might develop a bias towards the majority class. Therefore, addressing this imbalance through techniques like data augmentation, resampling, or specialized loss functions is a key consideration in the model development process, which has been discussed in Chapter~\ref{cha:hybrid_model}.
 
 \section{Experimental Environment and Parameter Settings}
 \label{sec:experiments:environment_parameters}
